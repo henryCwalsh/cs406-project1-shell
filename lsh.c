@@ -50,18 +50,20 @@ int main(int argc, char *argv[]) {
   while(1) {
     if(interactive == 1) {
       printf("lsh> ");
+      fflush(stdout);
     }
     lineLen = getline(&buf, &bufsize, input);
     if(lineLen == -1) {
+      free(buf);
       exit(0);
-    }
-    if(contains_only_ws(buf)) {
-      continue;
     }
     remove_special_characters(buf);
     trim_trailing_ws(buf);
     trim_leading_ws(buf);
     remove_duplicate_ws(buf);
+    if(contains_only_ws(buf)) {
+      continue;
+    }
     char **args = split_args_str(buf);
     char* cmd = args[1];
     if (cmd == NULL) {
