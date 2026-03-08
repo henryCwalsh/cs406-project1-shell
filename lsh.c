@@ -55,16 +55,16 @@ int main(int argc, char *argv[]) {
     if(lineLen == -1) {
       exit(0);
     }
+    if(contains_only_ws(buf)) {
+      continue;
+    }
     remove_special_characters(buf);
     trim_trailing_ws(buf);
     trim_leading_ws(buf);
     remove_duplicate_ws(buf);
-    if(contains_only_ws(buf)) {
-      continue;
-    }
     char **args = split_args_str(buf);
     char* cmd = args[1];
-    if (command == NULL) {
+    if (cmd == NULL) {
       free(args);
       continue;
     }
@@ -75,8 +75,20 @@ int main(int argc, char *argv[]) {
       free(args);
       continue;
     }
-    printf("command = %s\n", command);
-    printf("fullpath = %s\n", fullpath);
+    pid_t pid = fork();
+    if (pid < 0) {
+      print_error();
+      free(args);
+      continue;
+    }
+    else if (pid == 0) {
+      execv(full_path, &args[1]);
+      print_error();
+      exit(1);
+    }
+    else{
+      waitpid(pid, NULL, 0); //parent waits for child to finish, then continues loop
+    }
     free(args);
   }
 
