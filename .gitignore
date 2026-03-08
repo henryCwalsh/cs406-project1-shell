@@ -1,0 +1,13 @@
+# compiled program
+lsh
+
+# test output directory
+tests-out/
+
+# generated documentation/logs
+README.log
+
+# editor / OS junk
+.DS_Store
+*~
+*.o
