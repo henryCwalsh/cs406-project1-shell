@@ -116,6 +116,35 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
+    int redirect_index = -1;
+    char *output_file = NULL;
+    for(int i = 1; args[i] != NULL; i++) {
+      if(strcmp(args[i], ">") == 0) {
+        if(redirect_index != -1) {
+          print_error();
+          free(args);
+          continue;
+        }
+        redirect_index = i;
+      }
+    }
+
+    if(redirect_index != -1) {
+      if(redirect_index == 1){
+        print_error();
+        free(args);
+        continue;
+      }
+      if(args[redirect_index + 1] == NULL || args[redirect_index + 2] != NULL) {
+        print_error();
+        free(args);
+        continue;
+      }
+
+      output_file = args[redirect_index + 1];
+      args[redirect_index] = NULL; // terminate the command arguments before the redirect symbol
+    }
+
     char full_path[256];
     int found = 0;
     for(int i = 0; i < path_count; i++) {
@@ -139,6 +168,24 @@ int main(int argc, char *argv[]) {
     }
 
     else if (pid == 0) {
+      if(output_file != NULL) {
+        int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if(fd < 0) {
+          print_error();
+          exit(1);
+        }
+        if(dup2(fd, STDOUT_FILENO) < 0) {
+          print_error();
+          close(fd);
+          exit(1);
+        }
+        if(dup2(fd, STDERR_FILENO) < 0) {
+          print_error();
+          close(fd);
+          exit(1);
+        }
+        close(fd);
+      }
       execv(full_path, &args[1]);
       print_error();
       exit(1);
