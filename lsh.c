@@ -105,6 +105,10 @@ int main(int argc, char *argv[]) {
     }
 
     if(strcmp(cmd, "path") == 0) {
+      for (int i = 0; i < path_count; i++) {
+        free(paths[i]);
+      }
+      
       path_count = 0;
       int i = 2;
       while(args[i] != NULL && path_count < 100) {
