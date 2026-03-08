@@ -80,6 +80,21 @@ int main(int argc, char *argv[]) {
       free(args);
       continue;
     }
+    if (strcmp(cmd, "cd") == 0) {
+      if(args[3] != NULL) {
+        print_error();
+      } else if (args[2] == NULL) {
+        print_error();
+      }
+      else {
+        if(chdir(args[2]) != 0){
+          print_error();
+        }
+      }
+      free(args);
+      continue;
+    }
+    
     if (access(full_path, X_OK) != 0) {
       print_error();
       free(args);
