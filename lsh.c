@@ -22,6 +22,8 @@ void print_error(void);
 /*****************************************************************************/
 /************************************ the main event   ***********************/
 /*****************************************************************************/
+char *paths[100];
+int path_count = 1;
 
 int main(int argc, char *argv[]) {
   FILE *input = NULL;
@@ -29,6 +31,7 @@ int main(int argc, char *argv[]) {
   char *buf = NULL;
   size_t bufsize = 0;
   ssize_t lineLen;
+  paths[0] = strdup("/bin");
 
   if(argc == 1) {
     input = stdin;
@@ -46,17 +49,19 @@ int main(int argc, char *argv[]) {
     print_error();
     exit(1);
   }
-  char path[] = "/bin/";
+
   while(1) {
     if(interactive == 1) {
       printf("lsh> ");
       fflush(stdout);
     }
+
     lineLen = getline(&buf, &bufsize, input);
     if(lineLen == -1) {
       free(buf);
       exit(0);
     }
+
     remove_special_characters(buf);
     trim_trailing_ws(buf);
     trim_leading_ws(buf);
@@ -64,14 +69,15 @@ int main(int argc, char *argv[]) {
     if(contains_only_ws(buf)) {
       continue;
     }
+
     char **args = split_args_str(buf);
     char* cmd = args[1];
+
     if (cmd == NULL) {
       free(args);
       continue;
     }
-    char full_path[256];
-    snprintf(full_path, sizeof(full_path), "%s%s", path, cmd);
+
     if(strcmp(cmd, "exit") == 0) { //handle exit command inside shell not through execv
       if(args[2] != NULL) {
         print_error();
@@ -82,6 +88,7 @@ int main(int argc, char *argv[]) {
       free(args);
       continue;
     }
+
     if (strcmp(cmd, "cd") == 0) {
       if(args[3] != NULL) {
         print_error();
@@ -96,26 +103,51 @@ int main(int argc, char *argv[]) {
       free(args);
       continue;
     }
-    
-    if (access(full_path, X_OK) != 0) {
+
+    if(strcmp(cmd, "path") == 0) {
+      path_count = 0;
+      int i = 2;
+      while(args[i] != NULL && path_count < 100) {
+        paths[path_count] = strdup(args[i]);
+        path_count++;
+        i++;
+      }
+      free(args);
+      continue;
+    }
+
+    char full_path[256];
+    int found = 0;
+    for(int i = 0; i < path_count; i++) {
+      snprintf(full_path, sizeof(full_path), "%s/%s", paths[i], cmd);
+      if(access(full_path, X_OK) == 0) {
+        found = 1;
+        break;
+      }
+    }
+    if(!found) {
       print_error();
       free(args);
       continue;
     }
+
     pid_t pid = fork();
     if (pid < 0) {
       print_error();
       free(args);
       continue;
     }
+
     else if (pid == 0) {
       execv(full_path, &args[1]);
       print_error();
       exit(1);
     }
+
     else{
       waitpid(pid, NULL, 0); //parent waits for child to finish, then continues loop
     }
+
     free(args);
   }
 
