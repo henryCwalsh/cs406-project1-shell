@@ -117,16 +117,22 @@ int main(int argc, char *argv[]) {
     }
 
     int redirect_index = -1;
+    int redirect_error = 0;
     char *output_file = NULL;
     for(int i = 1; args[i] != NULL; i++) {
       if(strcmp(args[i], ">") == 0) {
         if(redirect_index != -1) {
-          print_error();
-          free(args);
-          continue;
+          redirect_error = 1;
+          break;
         }
         redirect_index = i;
       }
+    }
+    
+    if(redirect_error) {
+      print_error();
+      free(args);
+      continue;
     }
 
     if(redirect_index != -1) {
