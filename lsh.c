@@ -23,6 +23,45 @@ void print_error(void);
 /*****************************************************************************/
 
 int main(int argc, char *argv[]) {
+  FILE *input = NULL;
+  int interactive = 0;
+  char *buf = NULL;
+  size_t bufsize = 0;
+  ssize_t lineLen;
+
+  if(argc == 1) {
+    input = stdin;
+    interactive = 1;
+  }
+  else if(argc == 2) {
+    input = fopen(argv[1], "r");
+    if(input == NULL) {
+      print_error();
+      exit(1);
+    }
+    interactive = 0;
+  }
+  else{
+    print_error();
+    exit(1);
+  }
+  while(1) {
+    if(interactive == 1) {
+      printf("lsh> ");
+    }
+    lineLen = getline(&buf, &bufsize, input);
+    if(lineLen == -1) {
+      exit(0);
+    }
+    remove_special_characters(buf);
+    trim_trailing_ws(buf);
+    trim_leading_ws(buf);
+    remove_duplicate_ws(buf);
+    printf(buf);
+    if(contains_only_ws(buf)) {
+      continue;
+    }
+  }
 
   
   return 0;
