@@ -1,3 +1,4 @@
+//TEST sync
 // some needed h-files
 #include <stdlib.h>
 #include <stdio.h>
@@ -45,6 +46,7 @@ int main(int argc, char *argv[]) {
     print_error();
     exit(1);
   }
+  char path[] = "/bin/";
   while(1) {
     if(interactive == 1) {
       printf("lsh> ");
@@ -57,10 +59,25 @@ int main(int argc, char *argv[]) {
     trim_trailing_ws(buf);
     trim_leading_ws(buf);
     remove_duplicate_ws(buf);
-    printf(buf);
     if(contains_only_ws(buf)) {
       continue;
     }
+    char **args = split_args_str(buf);
+    char* cmd = args[1];
+    if (command == NULL) {
+      free(args);
+      continue;
+    }
+    char full_path[256];
+    snprintf(full_path, sizeof(full_path), "%s%s", path, cmd);
+    if (access(full_path, X_OK) != 0) {
+      print_error();
+      free(args);
+      continue;
+    }
+    printf("command = %s\n", command);
+    printf("fullpath = %s\n", fullpath);
+    free(args);
   }
 
   
