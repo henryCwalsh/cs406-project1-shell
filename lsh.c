@@ -70,6 +70,16 @@ int main(int argc, char *argv[]) {
     }
     char full_path[256];
     snprintf(full_path, sizeof(full_path), "%s%s", path, cmd);
+    if(strcmp(cmd, "exit") == 0) { //handle exit command inside shell not through execv
+      if(args[2] != NULL) {
+        print_error();
+      } else{
+        free(args);
+        exit(0);
+      }
+      free(args);
+      continue;
+    }
     if (access(full_path, X_OK) != 0) {
       print_error();
       free(args);
