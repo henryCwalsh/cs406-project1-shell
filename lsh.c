@@ -16,7 +16,7 @@ void remove_duplicate_ws       (char *buf);
 
 /************************************ path and exec processing   *************/
 char **split_args_str     (char *str);
-
+char **split_parallel_cmds(char *str, int *num_cmds);
 /************************************ Error Handling *************************/
 void print_error(void);
 /*****************************************************************************/
@@ -58,6 +58,9 @@ int main(int argc, char *argv[]) {
 
     lineLen = getline(&buf, &bufsize, input);
     if(lineLen == -1) {
+      for(int i = 0; i < path_count; i++) {
+        free(paths[i]);
+      }
       free(buf);
       exit(0);
     }
@@ -70,26 +73,64 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    char **args = split_args_str(buf);
-    char* cmd = args[1];
+    int num_cmds = 0;
+    char **cmds = split_parallel_cmds(buf, &num_cmds);
 
-    if (cmd == NULL) {
-      free(args);
-      continue;
-    }
-
-    if(strcmp(cmd, "exit") == 0) { //handle exit command inside shell not through execv
-      if(args[2] != NULL) {
-        print_error();
-      } else{
-        free(args);
-        exit(0);
+    int illegal_parallel = 0;
+    for(int i = 0; i < num_cmds; i++) {
+      trim_trailing_ws(cmds[i]);
+      trim_leading_ws(cmds[i]);
+      if(contains_only_ws(cmds[i]) || cmds[i][0] == '\0') {
+        illegal_parallel = 1;
+        break;
       }
-      free(args);
-      continue;
     }
+
+      if(illegal_parallel) {
+        print_error();
+        free(cmds);
+        continue;
+      }
+
+      pid_t pids[100];
+      int pid_count = 0;
+      for(int i = 0; i < num_cmds; i++) {
+        char **args = split_args_str(cmds[i]);
+        char *cmd = args[1];
+
+        if (cmd == NULL) {
+          free(args);
+          continue;
+        }
+        if(strcmp(cmd, "exit") == 0) { //handle exit command inside shell not through execv
+          if(num_cmds > 1) {
+            print_error();
+            free(args);
+            illegal_parallel = 1;
+            break;
+          }
+          if(args[2] != NULL) {
+            print_error();
+          } else{
+            free(args);
+            free(cmds);
+            for(int i = 0; i < path_count; i++) {
+              free(paths[i]);
+            }
+            free(buf);
+            exit(0);
+          }
+          free(args);
+          continue;
+        }  
 
     if (strcmp(cmd, "cd") == 0) {
+      if(num_cmds > 1) {
+        print_error();
+        free(args);
+        illegal_parallel = 1;
+        break;
+      }
       if(args[3] != NULL) {
         print_error();
       } else if (args[2] == NULL) {
@@ -105,6 +146,12 @@ int main(int argc, char *argv[]) {
     }
 
     if(strcmp(cmd, "path") == 0) {
+      if(num_cmds > 1) {
+        print_error();
+        free(args);
+        illegal_parallel = 1;
+        break;
+      }
       for (int i = 0; i < path_count; i++) {
         free(paths[i]);
       }
@@ -136,19 +183,22 @@ int main(int argc, char *argv[]) {
     if(redirect_error) {
       print_error();
       free(args);
-      continue;
+      illegal_parallel = 1;
+      break;
     }
 
     if(redirect_index != -1) {
       if(redirect_index == 1){
         print_error();
         free(args);
-        continue;
+        illegal_parallel = 1;
+        break;
       }
       if(args[redirect_index + 1] == NULL || args[redirect_index + 2] != NULL) {
         print_error();
         free(args);
-        continue;
+        illegal_parallel = 1;
+        break;
       }
 
       output_file = args[redirect_index + 1];
@@ -202,12 +252,21 @@ int main(int argc, char *argv[]) {
     }
 
     else{
-      waitpid(pid, NULL, 0); //parent waits for child to finish, then continues loop
+        pids[pid_count++] = pid;
     }
 
     free(args);
   }
+    if(illegal_parallel) {
+      free(cmds);
+      continue;
+    }
+    for(int i = 0; i < pid_count; i++) {
+      waitpid(pids[i], NULL, 0);
+    }
 
+    free(cmds);
+  }
   
   return 0;
 }
@@ -424,6 +483,7 @@ char **split_args_str(char *str) {
       }
       continue;
     }
+
     else if(*ptr == ' ') {
       *ptr = '\0';                // terminate current argument
       ptr++;
@@ -443,6 +503,32 @@ char **split_args_str(char *str) {
   return ptr_array;
 }
 
+char **split_parallel_cmds(char *str, int *num_cmds) {
+  int count = 1;
+  char *ptr = str;
+  while (*ptr) {
+    if (*ptr == '&') count++;
+    ptr++;
+  }
+  char **cmds = malloc((count + 1) * sizeof(char *));
+  if(cmds == NULL) {
+    print_error();
+    exit(1);
+  }
+  ptr = str;
+  int index = 0;
+  cmds[index++] = ptr;
+  while (*ptr) {
+    if(*ptr == '&') {
+      *ptr = '\0';
+      cmds[index++] = ptr + 1;
+    }
+    ptr++;
+  }
+  cmds[index] = NULL;
+  *num_cmds = index;
+  return cmds;
+}
 void print_error(void) {
   char* msg = "An error has occurred\n";
   write(STDERR_FILENO, msg, strlen(msg));
