@@ -392,7 +392,7 @@ char **split_args_str(char *str) {
   char *ptr       = str;          // initialize pointer
 
   while(*ptr) {                   // count spaces for additional arguments
-    if(*ptr == ' ') cnt_spaces++;
+    if(*ptr == ' ' || *ptr == '>') cnt_spaces++;
     ptr++;
   }
 
@@ -412,10 +412,28 @@ char **split_args_str(char *str) {
   index++;                        // index the next slot
 
   while(*ptr) {
-    if(*ptr == ' ') {
+    if(*ptr == '>') {
+      *ptr = '\0';             
+      ptr_array[index++] = ">";     
+      ptr++; 
+      while(*ptr == ' '){
+        ptr++;
+      }
+      if(*ptr != '\0') {
+        ptr_array[index++] = ptr;     
+      }
+      continue;
+    }
+    else if(*ptr == ' ') {
       *ptr = '\0';                // terminate current argument
-      ptr_array[index] = ptr + 1; // store next argument
-      index++;                    // index the next slot
+      ptr++;
+      while(*ptr == ' '){          // skip over any additional spaces
+        ptr++;
+      }
+      if(*ptr != '\0' && *ptr != '>') {
+      ptr_array[index++] = ptr; // store next argument
+      }
+      continue;
     }
     ptr++;
   }

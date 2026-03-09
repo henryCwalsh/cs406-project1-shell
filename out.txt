@@ -1,1 +1,12 @@
-ls: fakefile: No such file or directory
+Makefile
+README.log
+README.md
+SimpleShellREADME.pdf
+batch.txt
+lsh
+lsh.c
+out.txt
+run-tests.sh
+test-lsh.sh
+tests
+tests-out
