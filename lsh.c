@@ -76,31 +76,38 @@ int main(int argc, char *argv[]) {
     int num_cmds = 0;
     char **cmds = split_parallel_cmds(buf, &num_cmds);
 
-    int illegal_parallel = 0;
-    for(int i = 0; i < num_cmds; i++) {
-      trim_trailing_ws(cmds[i]);
-      trim_leading_ws(cmds[i]);
-      if(contains_only_ws(cmds[i]) || cmds[i][0] == '\0') {
-        illegal_parallel = 1;
-        break;
-      }
-    }
+  int real_cmd_count = 0;
 
-      if(illegal_parallel) {
-        print_error();
-        free(cmds);
-        continue;
-      }
+  for(int i = 0; i < num_cmds; i++) {
+    trim_trailing_ws(cmds[i]);
+    trim_leading_ws(cmds[i]);
+
+    if(!(contains_only_ws(cmds[i]) || cmds[i][0] == '\0')) {
+      real_cmd_count++;
+    }
+  }
+
+  if(real_cmd_count == 0) {
+    free(cmds);
+    continue;
+  }
 
       pid_t pids[100];
       int pid_count = 0;
-      for(int i = 0; i < num_cmds; i++) {
-        char **args = split_args_str(cmds[i]);
+      int illegal_parallel = 0;
+    for(int i = 0; i < num_cmds; i++) {
+      if(contains_only_ws(cmds[i]) || cmds[i][0] == '\0') {
+        continue;
+    }
+
+  char **args = split_args_str(cmds[i]);
         char *cmd = args[1];
 
-        if (cmd == NULL) {
+        if (cmd == NULL || cmd[0] == '\0') {
+          print_error();
           free(args);
-          continue;
+          illegal_parallel = 1;
+          break;
         }
         if(strcmp(cmd, "exit") == 0) { //handle exit command inside shell not through execv
           if(num_cmds > 1) {
